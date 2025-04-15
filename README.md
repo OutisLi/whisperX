@@ -96,7 +96,7 @@ If you want to modify the code or contribute to the project:
 ```bash
 git clone https://github.com/m-bain/whisperX.git
 cd whisperX
-uv sync --all-extras --dev
+uv sync --all-extras --dev --default-index "https://pypi.tuna.tsinghua.edu.cn/simple"
 ```
 
 > **Note**: The development version may contain experimental features and bugs. Use the stable PyPI release for production environments.
