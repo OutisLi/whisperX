@@ -30,6 +30,7 @@ def cli():
         device = "cuda"
     if torch.backends.mps.is_available():
         device = "mps"
+
     # fmt: off
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("audio", nargs="+", type=str, help="audio file(s) to transcribe")
@@ -41,8 +42,8 @@ def cli():
     parser.add_argument("--batch_size", default=8, type=int, help="the preferred batch size for inference")
     parser.add_argument("--compute_type", default="float16", type=str, choices=["float16", "float32", "int8"], help="compute type for computation")
 
-    parser.add_argument("--output_dir", "-o", type=str, default="outputs", help="directory to save the outputs")
-    parser.add_argument("--output_format", "-f", type=str, default="all", choices=["all", "srt", "vtt", "txt", "tsv", "json", "aud"], help="format of the output file; if not specified, all available formats will be produced")
+    parser.add_argument("--output_dir", "-o", type=str, default="output", help="directory to save the outputs")
+    parser.add_argument("--output_format", "-f", type=str, default="major", choices=["all", "major", "srt", "vtt", "txt", "tsv", "json", "aud"], help="format of the output file; if not specified, all available formats will be produced")
     parser.add_argument("--verbose", type=str2bool, default=False, help="whether to print out the progress and debug messages")
 
     parser.add_argument("--task", type=str, default="transcribe", choices=["transcribe", "translate"], help="whether to perform X->X speech recognition ('transcribe') or X->English translation ('translate')")
@@ -50,9 +51,10 @@ def cli():
 
     # alignment params
     parser.add_argument("--align_model", default=None, help="Name of phoneme-level ASR model to do alignment")
-    parser.add_argument("--interpolate_method", default="nearest", choices=["nearest", "linear", "ignore"], help="For word .srt, method to assign timestamps to non-aligned words, or merge them into neighbouring.")
+    parser.add_argument("--interpolate_method", default="linear", choices=["nearest", "linear", "ignore"], help="For word .srt, method to assign timestamps to non-aligned words, or merge them into neighbouring.")
     parser.add_argument("--no_align", action='store_true', help="Do not perform phoneme alignment")
     parser.add_argument("--return_char_alignments", action='store_true', help="Return character-level alignments in the output json file")
+    parser.add_argument("--return_word_segments", action='store_true', help="Return word_segments in the output json file")
 
     # vad params
     parser.add_argument("--vad_method", type=str, default="pyannote", choices=["pyannote", "silero"], help="VAD method to be used")
@@ -91,7 +93,7 @@ def cli():
 
     parser.add_argument("--hf_token", type=str, default=None, help="Hugging Face Access Token to access PyAnnote gated models")
 
-    parser.add_argument("--print_progress", type=str2bool, default = False, help = "if True, progress will be printed in transcribe() and align() methods.")
+    parser.add_argument("--print_progress", type=str2bool, default=True, help = "if True, progress will be printed in transcribe() and align() methods.")
     # fmt: on
 
     args = parser.parse_args().__dict__
@@ -118,6 +120,7 @@ def cli():
         no_align = True
 
     return_char_alignments: bool = args.pop("return_char_alignments")
+    return_word_segments: bool = args.pop("return_word_segments")
 
     hf_token: str = args.pop("hf_token")
     vad_method: str = args.pop("vad_method")
@@ -246,6 +249,7 @@ def cli():
                     device,
                     interpolate_method=interpolate_method,
                     return_char_alignments=return_char_alignments,
+                    return_word_segments=return_word_segments,
                     print_progress=print_progress,
                 )
 

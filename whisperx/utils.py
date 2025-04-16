@@ -399,13 +399,12 @@ class WriteAudacity(ResultWriter):
             print(segment["end"], file=file, end=ARROW)
             print( ( ("[[" + segment["speaker"] + "]]") if "speaker" in segment else "") + segment["text"].strip().replace("\t", " "), file=file, flush=True)
 
-            
 
 class WriteJSON(ResultWriter):
     extension: str = "json"
 
     def write_result(self, result: dict, file: TextIO, options: dict):
-        json.dump(result, file, ensure_ascii=False)
+        json.dump(result, file, ensure_ascii=False, indent=4, sort_keys=True)
 
 
 def get_writer(
@@ -430,6 +429,15 @@ def get_writer(
                 writer(result, file, options)
 
         return write_all
+
+    if output_format == "major":
+        major_writers = [writer(output_dir) for writer in [WriteJSON, WriteSRT]]
+
+        def write_major(result: dict, file: TextIO, options: dict):
+            for writer in major_writers:
+                writer(result, file, options)
+
+        return write_major
 
     if output_format in optional_writers:
         return optional_writers[output_format](output_dir)
