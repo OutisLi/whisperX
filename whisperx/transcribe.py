@@ -25,22 +25,17 @@ torch.backends.cudnn.allow_tf32 = False
 
 
 def cli():
-    device = "cpu"
-    if torch.cuda.is_available():
-        device = "cuda"
-    if torch.backends.mps.is_available():
-        device = "mps"
 
     # fmt: off
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("audio", nargs="+", type=str, help="audio file(s) to transcribe")
     parser.add_argument("--model", default="large-v2", help="name of the Whisper model to use")
-    parser.add_argument("--model_cache_only", type=str2bool, default=True, help="If True, will not attempt to download models, instead using cached models from --model_dir")
-    parser.add_argument("--model_dir", type=str, default="models", help="the path to save model files; uses ~/.cache/whisper by default")
-    parser.add_argument("--device", default=device, help="device to use for PyTorch inference")
+    parser.add_argument("--model_cache_only", type=str2bool, default=False, help="If True, will not attempt to download models, instead using cached models from --model_dir")
+    parser.add_argument("--model_dir", type=str, default="models", help="the path to save model files")
+    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu", help="device to use for PyTorch inference")
     parser.add_argument("--device_index", default=0, type=int, help="device index to use for FasterWhisper inference")
     parser.add_argument("--batch_size", default=8, type=int, help="the preferred batch size for inference")
-    parser.add_argument("--compute_type", default="float16", type=str, choices=["float16", "float32", "int8"], help="compute type for computation")
+    parser.add_argument("--compute_type", default="int8", type=str, choices=["float16", "float32", "int8"], help="compute type for computation")
 
     parser.add_argument("--output_dir", "-o", type=str, default="output", help="directory to save the outputs")
     parser.add_argument("--output_format", "-f", type=str, default="major", choices=["all", "major", "srt", "vtt", "txt", "tsv", "json", "aud"], help="format of the output file; if not specified, all available formats will be produced")
@@ -109,7 +104,9 @@ def cli():
     verbose: bool = args.pop("verbose")
 
     # model_flush: bool = args.pop("model_flush")
+    os.makedirs(model_dir, exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
+    os.environ["TORCH_HOME"] = model_dir
 
     align_model: str = args.pop("align_model")
     interpolate_method: str = args.pop("interpolate_method")
@@ -224,7 +221,7 @@ def cli():
     if not no_align:
         tmp_results = results
         results = []
-        align_model, align_metadata = load_align_model(align_language, device, model_name=align_model)
+        align_model, align_metadata = load_align_model(align_language, device, model_name=align_model, model_dir=model_dir)
         for result, audio_path in tmp_results:
             # >> Align
             if len(tmp_results) > 1:
