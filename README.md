@@ -99,6 +99,15 @@ cd whisperX
 uv sync --all-extras --dev
 ```
 
+```bash
+git clone https://github.com/m-bain/whisperX.git
+cd whisperX
+conda create -n whisperx python=3.12
+conda activate whisperx
+pip install --pre torch torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128
+pip install -e .
+```
+
 > **Note**: The development version may contain experimental features and bugs. Use the stable PyPI release for production environments.
 
 You may also need to install ffmpeg, rust etc. Follow openAI instructions here https://github.com/openai/whisper#setup.
