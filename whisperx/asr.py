@@ -48,7 +48,11 @@ class WhisperModel(faster_whisper.WhisperModel):
             all_tokens.extend(initial_prompt_tokens)
         previous_tokens = all_tokens[prompt_reset_since:]
         prompt = self.get_prompt(
-            tokenizer, previous_tokens, without_timestamps=options.without_timestamps, prefix=options.prefix, hotwords=options.hotwords
+            tokenizer,
+            previous_tokens,
+            without_timestamps=options.without_timestamps,
+            prefix=options.prefix,
+            hotwords=options.hotwords,
         )
 
         encoder_output = self.encode(features)
@@ -253,7 +257,13 @@ class FasterWhisperPipeline(Pipeline):
         segments: List[SingleSegment] = []
         batch_size = batch_size or self._batch_size
         total_segments = len(vad_segments)
-        for idx, out in enumerate(self.__call__(data(audio, vad_segments), batch_size=batch_size, num_workers=num_workers)):
+        for idx, out in enumerate(
+            self.__call__(
+                data(audio, vad_segments),
+                batch_size=batch_size,
+                num_workers=num_workers,
+            )
+        ):
             if print_progress:
                 base_progress = ((idx + 1) / total_segments) * 100
                 percent_complete = base_progress / 2 if combined_progress else base_progress
@@ -263,7 +273,13 @@ class FasterWhisperPipeline(Pipeline):
                 text = text[0]
             if verbose:
                 print(f"Transcript: [{round(vad_segments[idx]['start'], 3)} --> {round(vad_segments[idx]['end'], 3)}] {text}")
-            segments.append({"text": text, "start": round(vad_segments[idx]["start"], 3), "end": round(vad_segments[idx]["end"], 3)})
+            segments.append(
+                {
+                    "text": text,
+                    "start": round(vad_segments[idx]["start"], 3),
+                    "end": round(vad_segments[idx]["end"], 3),
+                }
+            )
 
         # revert the tokenizer if multilingual inference is enabled
         if self.preset_language is None:
@@ -337,7 +353,12 @@ def load_model(
         cpu_threads=threads,
     )
     if language is not None:
-        tokenizer = Tokenizer(model.hf_tokenizer, model.model.is_multilingual, task=task, language=language)
+        tokenizer = Tokenizer(
+            model.hf_tokenizer,
+            model.model.is_multilingual,
+            task=task,
+            language=language,
+        )
     else:
         print("No language specified, language will be first be detected for each audio file (increases inference time).")
         tokenizer = None

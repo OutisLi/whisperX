@@ -2,6 +2,7 @@
 Forced Alignment with Whisper
 C. Max Bain
 """
+
 import math
 
 from dataclasses import dataclass
@@ -25,7 +26,7 @@ from whisperx.types import (
 )
 from nltk.tokenize.punkt import PunktSentenceTokenizer, PunktParameters
 
-PUNKT_ABBREVIATIONS = ['dr', 'vs', 'mr', 'mrs', 'prof']
+PUNKT_ABBREVIATIONS = ["dr", "vs", "mr", "mrs", "prof"]
 
 LANGUAGES_WITHOUT_SPACES = ["ja", "zh"]
 
@@ -54,7 +55,7 @@ DEFAULT_ALIGN_MODELS_HF = {
     "tr": "mpoyraz/wav2vec2-xls-r-300m-cv7-turkish",
     "da": "saattrupdan/wav2vec2-xls-r-300m-ftspeech",
     "he": "imvladikon/wav2vec2-xls-r-300m-hebrew",
-    "vi": 'nguyenvulebinh/wav2vec2-base-vi',
+    "vi": "nguyenvulebinh/wav2vec2-base-vi",
     "ko": "kresnik/wav2vec2-large-xlsr-korean",
     "ur": "kingabzpro/wav2vec2-large-xls-r-300m-Urdu",
     "te": "anuragshas/wav2vec2-large-xlsr-53-telugu",
@@ -83,8 +84,10 @@ def load_align_model(language_code: str, device: str, model_name: Optional[str] 
         elif language_code in DEFAULT_ALIGN_MODELS_HF:
             model_name = DEFAULT_ALIGN_MODELS_HF[language_code]
         else:
-            print(f"There is no default alignment model set for this language ({language_code}).\
-                Please find a wav2vec2.0 model finetuned on this language in https://huggingface.co/models, then pass the model name in --align_model [MODEL_NAME]")
+            print(
+                f"There is no default alignment model set for this language ({language_code}).\
+                Please find a wav2vec2.0 model finetuned on this language in https://huggingface.co/models, then pass the model name in --align_model [MODEL_NAME]"
+            )
             raise ValueError(f"No default align-model for language: {language_code}")
 
     if model_name in torchaudio.pipelines.__all__:
@@ -100,13 +103,19 @@ def load_align_model(language_code: str, device: str, model_name: Optional[str] 
         except Exception as e:
             print(e)
             print(f"Error loading model from huggingface, check https://huggingface.co/models for finetuned wav2vec2.0 models")
-            raise ValueError(f'The chosen align_model "{model_name}" could not be found in huggingface (https://huggingface.co/models) or torchaudio (https://pytorch.org/audio/stable/pipelines.html#id14)')
+            raise ValueError(
+                f'The chosen align_model "{model_name}" could not be found in huggingface (https://huggingface.co/models) or torchaudio (https://pytorch.org/audio/stable/pipelines.html#id14)'
+            )
         pipeline_type = "huggingface"
         align_model = align_model.to(device)
         labels = processor.tokenizer.get_vocab()
-        align_dictionary = {char.lower(): code for char,code in processor.tokenizer.get_vocab().items()}
+        align_dictionary = {char.lower(): code for char, code in processor.tokenizer.get_vocab().items()}
 
-    align_metadata = {"language": language_code, "dictionary": align_dictionary, "type": pipeline_type}
+    align_metadata = {
+        "language": language_code,
+        "dictionary": align_dictionary,
+        "type": pipeline_type,
+    }
 
     return align_model, align_metadata
 
@@ -178,7 +187,7 @@ def align(
                 clean_cdx.append(cdx)
             else:
                 # add placeholder
-                clean_char.append('*')
+                clean_char.append("*")
                 clean_cdx.append(cdx)
 
         clean_wdx = []
@@ -198,14 +207,13 @@ def align(
             "clean_char": clean_char,
             "clean_cdx": clean_cdx,
             "clean_wdx": clean_wdx,
-            "sentence_spans": sentence_spans
+            "sentence_spans": sentence_spans,
         }
 
     aligned_segments: List[SingleAlignedSegment] = []
 
     # 2. Get prediction matrix from alignment model & align
     for sdx, segment in enumerate(transcript):
-
         t1 = segment["start"]
         t2 = segment["end"]
         text = segment["text"]
@@ -243,9 +251,7 @@ def align(
         # Handle the minimum input length for wav2vec2 models
         if waveform_segment.shape[-1] < 400:
             lengths = torch.as_tensor([waveform_segment.shape[-1]]).to(device)
-            waveform_segment = torch.nn.functional.pad(
-                waveform_segment, (0, 400 - waveform_segment.shape[-1])
-            )
+            waveform_segment = torch.nn.functional.pad(waveform_segment, (0, 400 - waveform_segment.shape[-1]))
         else:
             lengths = None
 
@@ -262,7 +268,7 @@ def align(
 
         blank_id = 0
         for char, code in model_dictionary.items():
-            if char == '[pad]' or char == '<pad>':
+            if char == "[pad]" or char == "<pad>":
                 blank_id = code
 
         trellis = get_trellis(emission, tokens, blank_id)
@@ -303,7 +309,7 @@ def align(
             # increment word_idx, nltk word tokenization would probably be more robust here, but us space for now...
             if model_lang in LANGUAGES_WITHOUT_SPACES:
                 word_idx += 1
-            elif cdx == len(text) - 1 or text[cdx+1] == " ":
+            elif cdx == len(text) - 1 or text[cdx + 1] == " ":
                 word_idx += 1
 
         char_segments_arr = pd.DataFrame(char_segments_arr)
@@ -313,11 +319,14 @@ def align(
         char_segments_arr["sentence-idx"] = None
         for sdx2, (sstart, send) in enumerate(segment_data[sdx]["sentence_spans"]):
             curr_chars = char_segments_arr.loc[(char_segments_arr.index >= sstart) & (char_segments_arr.index <= send)]
-            char_segments_arr.loc[(char_segments_arr.index >= sstart) & (char_segments_arr.index <= send), "sentence-idx"] = sdx2
+            char_segments_arr.loc[
+                (char_segments_arr.index >= sstart) & (char_segments_arr.index <= send),
+                "sentence-idx",
+            ] = sdx2
 
             sentence_text = text[sstart:send]
             sentence_start = curr_chars["start"].min()
-            end_chars = curr_chars[curr_chars["char"] != ' ']
+            end_chars = curr_chars[curr_chars["char"] != " "]
             sentence_end = end_chars["end"].max()
             sentence_words = []
 
@@ -346,12 +355,14 @@ def align(
 
                 sentence_words.append(word_segment)
 
-            aligned_subsegments.append({
-                "text": sentence_text,
-                "start": sentence_start,
-                "end": sentence_end,
-                "words": sentence_words,
-            })
+            aligned_subsegments.append(
+                {
+                    "text": sentence_text,
+                    "start": sentence_start,
+                    "end": sentence_end,
+                    "words": sentence_words,
+                }
+            )
 
             if return_char_alignments:
                 curr_chars = curr_chars[["char", "start", "end", "score"]]
@@ -369,8 +380,8 @@ def align(
             agg_dict["text"] = "".join
         if return_char_alignments:
             agg_dict["chars"] = "sum"
-        aligned_subsegments= aligned_subsegments.groupby(["start", "end"], as_index=False).agg(agg_dict)
-        aligned_subsegments = aligned_subsegments.to_dict('records')
+        aligned_subsegments = aligned_subsegments.groupby(["start", "end"], as_index=False).agg(agg_dict)
+        aligned_subsegments = aligned_subsegments.to_dict("records")
         aligned_segments += aligned_subsegments
 
     # create word_segments list
@@ -395,7 +406,7 @@ def get_trellis(emission, tokens, blank_id=0):
     trellis = torch.zeros((num_frame, num_tokens))
     trellis[1:, 0] = torch.cumsum(emission[1:, blank_id], 0)
     trellis[0, 1:] = -float("inf")
-    trellis[-num_tokens + 1:, 0] = float("inf")
+    trellis[-num_tokens + 1 :, 0] = float("inf")
 
     for t in range(num_frame - 1):
         trellis[t + 1, 1:] = torch.maximum(
@@ -425,14 +436,14 @@ def get_wildcard_emission(frame_emission, tokens, blank_id):
     tokens = torch.tensor(tokens) if not isinstance(tokens, torch.Tensor) else tokens
 
     # Create a mask to identify wildcard positions
-    wildcard_mask = (tokens == -1)
+    wildcard_mask = tokens == -1
 
     # Get scores for non-wildcard positions
     regular_scores = frame_emission[tokens.clamp(min=0).long()]  # clamp to avoid -1 index
 
     # Create a mask and compute the maximum value without modifying frame_emission
-    max_valid_score = frame_emission.clone()   # Create a copy
-    max_valid_score[blank_id] = float('-inf')  # Modify the copy to exclude the blank token
+    max_valid_score = frame_emission.clone()  # Create a copy
+    max_valid_score[blank_id] = float("-inf")  # Modify the copy to exclude the blank token
     max_valid_score = max_valid_score.max()
 
     # Use where operation to combine results
@@ -494,9 +505,10 @@ class Path:
 @dataclass
 class BeamState:
     """State in beam search."""
-    token_index: int   # Current token position
-    time_index: int    # Current time step
-    score: float       # Cumulative score
+
+    token_index: int  # Current token position
+    time_index: int  # Current time step
+    score: float  # Cumulative score
     path: List[Point]  # Path history
 
 
@@ -520,7 +532,7 @@ def backtrack_beam(trellis, emission, tokens, blank_id=0, beam_width=5):
         token_index=J,
         time_index=T,
         score=trellis[T, J],
-        path=[Point(J, T, emission[T, blank_id].exp().item())]
+        path=[Point(J, T, emission[T, blank_id].exp().item())],
     )
 
     beams = [init_state]
@@ -538,29 +550,26 @@ def backtrack_beam(trellis, emission, tokens, blank_id=0, beam_width=5):
             p_change = get_wildcard_emission(emission[t - 1], [tokens[j]], blank_id)[0]
 
             stay_score = trellis[t - 1, j]
-            change_score = trellis[t - 1, j - 1] if j > 0 else float('-inf')
+            change_score = trellis[t - 1, j - 1] if j > 0 else float("-inf")
 
             # Stay
             if not math.isinf(stay_score):
                 new_path = beam.path.copy()
                 new_path.append(Point(j, t - 1, p_stay.exp().item()))
-                next_beams.append(BeamState(
-                    token_index=j,
-                    time_index=t - 1,
-                    score=stay_score,
-                    path=new_path
-                ))
+                next_beams.append(BeamState(token_index=j, time_index=t - 1, score=stay_score, path=new_path))
 
             # Change
             if j > 0 and not math.isinf(change_score):
                 new_path = beam.path.copy()
                 new_path.append(Point(j - 1, t - 1, p_change.exp().item()))
-                next_beams.append(BeamState(
-                    token_index=j - 1,
-                    time_index=t - 1,
-                    score=change_score,
-                    path=new_path
-                ))
+                next_beams.append(
+                    BeamState(
+                        token_index=j - 1,
+                        time_index=t - 1,
+                        score=change_score,
+                        path=new_path,
+                    )
+                )
 
         # sort by score
         beams = sorted(next_beams, key=lambda x: x.score, reverse=True)[:beam_width]
@@ -597,6 +606,7 @@ class Segment:
     def length(self):
         return self.end - self.start
 
+
 def merge_repeats(path, transcript):
     i1, i2 = 0, 0
     segments = []
@@ -614,6 +624,7 @@ def merge_repeats(path, transcript):
         )
         i1 = i2
     return segments
+
 
 def merge_words(segments, separator="|"):
     words = []

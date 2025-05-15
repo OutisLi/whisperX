@@ -71,9 +71,7 @@ def pad_or_trim(array, length: int = N_SAMPLES, *, axis: int = -1):
     """
     if torch.is_tensor(array):
         if array.shape[axis] > length:
-            array = array.index_select(
-                dim=axis, index=torch.arange(length, device=array.device)
-            )
+            array = array.index_select(dim=axis, index=torch.arange(length, device=array.device))
 
         if array.shape[axis] < length:
             pad_widths = [(0, 0)] * array.ndim
@@ -103,9 +101,7 @@ def mel_filters(device, n_mels: int) -> torch.Tensor:
         )
     """
     assert n_mels in [80, 128], f"Unsupported n_mels: {n_mels}"
-    with np.load(
-        os.path.join(os.path.dirname(__file__), "assets", "mel_filters.npz")
-    ) as f:
+    with np.load(os.path.join(os.path.dirname(__file__), "assets", "mel_filters.npz")) as f:
         return torch.from_numpy(f[f"mel_{n_mels}"]).to(device)
 
 
