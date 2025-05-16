@@ -1,3 +1,4 @@
+import os
 import argparse
 import importlib.metadata
 import platform
@@ -5,6 +6,8 @@ import platform
 import torch
 
 from whisperx.utils import LANGUAGES, TO_LANGUAGE_CODE, optional_float, optional_int, str2bool
+
+os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 
 
 def cli():
